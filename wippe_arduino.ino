@@ -1,36 +1,43 @@
-//#include <ArduinoJson.h>
 #include <Servo.h>
 
 #define analogMax 1023.0
+#define histSize 5
 
-#define meanServoValues 3
 #define servoMin 20
 #define servoMax 160
 
-#define joystickSwitch 6
 #define joystickX 4
 #define joystickY 5
+#define joystickSwitch 6
+
+#define P 0.5
+#define I 0.5
+#define D 0.5
 
 Servo servoX;
 Servo servoY;
 
-long calibratingTime = 0;
+long lastModeSwitchTime = 0;
 bool calibrating = false;
 
 float calX = 0;
 float calY = 0;
-float x;
-float y;
-float lastX[meanServoValues];
-float lastY[meanServoValues];
+float ballX = 0.5;
+float ballY = 0.5;
+float posX, posY;
+
+float ballXHist[histSize] = { };
+float ballYHist[histSize] = { };
 
 void setup() {
     Serial.begin(9600);
 
-    servoX.attach(10);
-    servoY.attach(11);
+    servoX.attach(11);
+    servoY.attach(10);
 
-    pinMode(joystickSwitch, INPUT);
+    pinMode(joystickSwitch, INPUT_PULLUP);
+
+    Serial.println("initalizing");
 
     bool on = false;
     for (int i = 30; i <= 150; i++) {
@@ -56,53 +63,53 @@ void setup() {
 }
 
 void loop() {
-    int switchValue = analogRead(joystickSwitch);
-    if (switchValue < 200) {
+    if (Serial.available() > 0) {
+        String strX = Serial.readStringUntil(',');
+        String strY = Serial.readStringUntil(';');
+        
+        while(Serial.available() > 0) {
+            char t = Serial.read();
+        }
+
+        if (strX.length() == 0) ballX = 0.5;
+        else ballX = -strX.toFloat() + 1;
+
+        if (strY.length() == 0) ballY = 0.5;
+        else ballY = strY.toFloat();
+    }
+
+
+    if (analogRead(joystickSwitch) < 100) {
         long time = millis();
 
-        if (time - calibratingTime > 1000) {
+        if (time - lastModeSwitchTime > 1000) {
             calibrating = !calibrating;
-            calibratingTime = time;
+            lastModeSwitchTime = time;
+            digitalWrite(LED_BUILTIN, calibrating);
         }
     }
 
     if (calibrating) {
         calX += (analogRead(joystickX) / analogMax - 0.5) / 100.0;
         calY += (analogRead(joystickY) / analogMax - 0.5) / 100.0;
-        x = 0.5;
-        y = 0.5;
-    } else {
-        x = analogRead(joystickX) / analogMax;
-        y = analogRead(joystickY) / analogMax;
+        posX = 0.5;
+        posY = 0.5;
     }
 
-    float dx = x;
-    float dy = x;
+    posX = ballX;
+    posY = ballY;
 
-    for (int i = 0; i < meanServoValues; i++) {
-        dx += lastX[i];
-        dy += lastY[i];
-    }
+    servoX.write((posX + calX) * (servoMax - servoMin) + servoMin);
+    servoY.write((posY + calY) * (servoMax - servoMin) + servoMin);
 
-    dx /= meanServoValues + 1;
-    dy /= meanServoValues + 1;
-    
-    servoX.write((dx + calX) * (servoMax - servoMin) + servoMin);
-    servoY.write((dy + calY) * (servoMax - servoMin) + servoMin);
-
-    for (int i = 0; i < meanServoValues - 1; i++) {
-        lastX[i] = lastX[i + 1];
-        lastY[i] = lastY[i + 1];
-    }
-    lastX[meanServoValues - 1] = x;
-    lastY[meanServoValues - 1] = y;
-
-    Serial.print("x: ");
-    Serial.print(x);
-    Serial.print(" y: ");
-    Serial.print(y);
-    Serial.print(" switchValue: ");
-    Serial.print(switchValue);
-    Serial.print(" calibrating: ");
+    Serial.print("ballX: ");
+    Serial.print(ballX);
+    Serial.print(", ballY: ");
+    Serial.print(ballY);
+    Serial.print(", posX: ");
+    Serial.print(posX);
+    Serial.print(", posY: ");
+    Serial.print(posY);
+    Serial.print(", calibrating: ");
     Serial.println(calibrating);
 }
