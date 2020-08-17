@@ -1,7 +1,6 @@
 #include <Servo.h>
 
 #define analogMax 1023.0
-#define histSize 5
 
 #define servoMin 20
 #define servoMax 160
@@ -10,9 +9,9 @@
 #define joystickY 5
 #define joystickSwitch 6
 
-#define P 0.5
-#define I 0.5
-#define D 0.5
+#define PF 0.8
+#define IF 0.05
+#define DF 0.3
 
 Servo servoX;
 Servo servoY;
@@ -20,14 +19,23 @@ Servo servoY;
 long lastModeSwitchTime = 0;
 bool calibrating = false;
 
+long currentTime = 0;
+long lastUpdateTime = 0;
 float calX = 0;
 float calY = 0;
 float ballX = 0.5;
 float ballY = 0.5;
-float posX, posY;
+float posX = 0.5;
+float posY = 0.5;
+float lastPosX = 0.5;
+float lastPosY = 0.5;
 
-float ballXHist[histSize] = { };
-float ballYHist[histSize] = { };
+float px = 0;
+float py = 0;
+float dx = 0;
+float dy = 0;
+float ix = 0;
+float iy = 0;
 
 void setup() {
     Serial.begin(9600);
@@ -72,10 +80,33 @@ void loop() {
         }
 
         if (strX.length() == 0) ballX = 0.5;
-        else ballX = -strX.toFloat() + 1;
+        else ballX = strX.toFloat();
 
         if (strY.length() == 0) ballY = 0.5;
-        else ballY = strY.toFloat();
+        else ballY = -strY.toFloat() + 1;
+
+        currentTime = millis();
+    
+        float diffX = (0.5 - ballX);
+        float diffY = (0.5 - ballY);
+        float timeDiff = currentTime - lastUpdateTime;
+        
+        px = diffX * PF;
+        py = diffY * PF;
+
+        ix += diffX * IF / timeDiff;
+        iy += diffY * IF / timeDiff;
+
+        dx = (lastPosX - diffX) * DF / timeDiff;
+        dy = (lastPosY - diffY) * DF / timeDiff;
+         
+        posX = 0.5 + px + ix + dx;
+        posY = 0.5 + py + iy + dy;
+
+        lastPosX = posX;
+        lastPosY = posY;
+    
+        lastUpdateTime = millis();
     }
 
 
@@ -96,9 +127,6 @@ void loop() {
         posY = 0.5;
     }
 
-    posX = ballX;
-    posY = ballY;
-
     servoX.write((posX + calX) * (servoMax - servoMin) + servoMin);
     servoY.write((posY + calY) * (servoMax - servoMin) + servoMin);
 
@@ -110,6 +138,18 @@ void loop() {
     Serial.print(posX);
     Serial.print(", posY: ");
     Serial.print(posY);
+    Serial.print(", px: ");
+    Serial.print(px);
+    Serial.print(", py: ");
+    Serial.print(py);
+    Serial.print(", ix: ");
+    Serial.print(ix);
+    Serial.print(", iy: ");
+    Serial.print(iy);
+    Serial.print(", dx: ");
+    Serial.print(dx);
+    Serial.print(", dy: ");
+    Serial.print(dy);
     Serial.print(", calibrating: ");
     Serial.println(calibrating);
 }
