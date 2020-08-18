@@ -3,9 +3,9 @@
 #define servoMin 20
 #define servoMax 160
 
-#define PF 0.5
-#define IF 0.001
-#define DF 0.8
+#define PF 0.3
+#define IF 0.01
+#define DF 120
 
 Servo servoX;
 Servo servoY;
@@ -37,25 +37,15 @@ void setup() {
     Serial.println("initalizing");
 
     bool on = false;
-    for (int i = 30; i <= 150; i++) {
+    for (int i = servoMin + 30; i <= servoMax - 30; i++) {
         servoX.write(i);
         servoY.write(i);
-        delay(10);
-        
-        if (i % 10 == 0) {
-            on = !on;
-            digitalWrite(LED_BUILTIN, on);
-        }
+        delay(5);
     }
-    for (int i = 150; i >= 30; i--) {
+    for (int i = servoMax - 30; i >= servoMin + 30; i--) {
         servoX.write(i);
         servoY.write(i);
-        delay(10);
-        
-        if (i % 10 == 0) {
-            on = !on;
-            digitalWrite(LED_BUILTIN, on);
-        }
+        delay(5);
     }
 }
 
