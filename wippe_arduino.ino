@@ -5,7 +5,7 @@
 
 #define PF 0.3
 #define IF 0.01
-#define DF 120
+#define DF 100
 
 Servo servoX;
 Servo servoY;
