@@ -1,23 +1,14 @@
 #include <Servo.h>
 
-#define analogMax 1023.0
-
 #define servoMin 20
 #define servoMax 160
 
-#define joystickX 4
-#define joystickY 5
-#define joystickSwitch 6
-
-#define PF 0.8
-#define IF 0.05
-#define DF 0.3
+#define PF 0.5
+#define IF 0.001
+#define DF 0.8
 
 Servo servoX;
 Servo servoY;
-
-long lastModeSwitchTime = 0;
-bool calibrating = false;
 
 long currentTime = 0;
 long lastUpdateTime = 0;
@@ -27,8 +18,8 @@ float ballX = 0.5;
 float ballY = 0.5;
 float posX = 0.5;
 float posY = 0.5;
-float lastPosX = 0.5;
-float lastPosY = 0.5;
+float lastDiffX = 0;
+float lastDiffY = 0;
 
 float px = 0;
 float py = 0;
@@ -42,8 +33,6 @@ void setup() {
 
     servoX.attach(11);
     servoY.attach(10);
-
-    pinMode(joystickSwitch, INPUT_PULLUP);
 
     Serial.println("initalizing");
 
@@ -73,10 +62,10 @@ void setup() {
 void loop() {
     if (Serial.available() > 0) {
         String strX = Serial.readStringUntil(',');
-        String strY = Serial.readStringUntil(';');
-        
-        while(Serial.available() > 0) {
-            char t = Serial.read();
+        String strY = Serial.readStringUntil('\n');
+
+        while (Serial.available()) {
+            Serial.read();
         }
 
         if (strX.length() == 0) ballX = 0.5;
@@ -97,59 +86,24 @@ void loop() {
         ix += diffX * IF / timeDiff;
         iy += diffY * IF / timeDiff;
 
-        dx = (lastPosX - diffX) * DF / timeDiff;
-        dy = (lastPosY - diffY) * DF / timeDiff;
+        dx = (diffX - lastDiffX) * DF / timeDiff;
+        dy = (diffY - lastDiffY) * DF / timeDiff;
          
         posX = 0.5 + px + ix + dx;
         posY = 0.5 + py + iy + dy;
 
-        lastPosX = posX;
-        lastPosY = posY;
+        lastDiffX = diffX;
+        lastDiffY = diffY;
     
         lastUpdateTime = millis();
     }
 
+    servoX.write((posX) * (servoMax - servoMin) + servoMin);
+    servoY.write((posY) * (servoMax - servoMin) + servoMin);
 
-    if (analogRead(joystickSwitch) < 100) {
-        long time = millis();
-
-        if (time - lastModeSwitchTime > 1000) {
-            calibrating = !calibrating;
-            lastModeSwitchTime = time;
-            digitalWrite(LED_BUILTIN, calibrating);
-        }
-    }
-
-    if (calibrating) {
-        calX += (analogRead(joystickX) / analogMax - 0.5) / 100.0;
-        calY += (analogRead(joystickY) / analogMax - 0.5) / 100.0;
-        posX = 0.5;
-        posY = 0.5;
-    }
-
-    servoX.write((posX + calX) * (servoMax - servoMin) + servoMin);
-    servoY.write((posY + calY) * (servoMax - servoMin) + servoMin);
-
-    Serial.print("ballX: ");
+    Serial.print("bx:");
     Serial.print(ballX);
-    Serial.print(", ballY: ");
+    Serial.print("by:");
     Serial.print(ballY);
-    Serial.print(", posX: ");
-    Serial.print(posX);
-    Serial.print(", posY: ");
-    Serial.print(posY);
-    Serial.print(", px: ");
-    Serial.print(px);
-    Serial.print(", py: ");
-    Serial.print(py);
-    Serial.print(", ix: ");
-    Serial.print(ix);
-    Serial.print(", iy: ");
-    Serial.print(iy);
-    Serial.print(", dx: ");
-    Serial.print(dx);
-    Serial.print(", dy: ");
-    Serial.print(dy);
-    Serial.print(", calibrating: ");
-    Serial.println(calibrating);
+    Serial.println();
 }
