@@ -3,9 +3,9 @@
 #define servoMin 20
 #define servoMax 160
 
-#define PF 0.3
-#define IF 0.01
-#define DF 100
+#define PF 0.7
+#define IF 0
+#define DF 180
 
 Servo servoX;
 Servo servoY;
@@ -37,14 +37,9 @@ void setup() {
     Serial.println("initalizing");
 
     bool on = false;
-    for (int i = servoMin + 30; i <= servoMax - 30; i++) {
-        servoX.write(i);
-        servoY.write(i);
-        delay(5);
-    }
-    for (int i = servoMax - 30; i >= servoMin + 30; i--) {
-        servoX.write(i);
-        servoY.write(i);
+    for (float i = -2; i <= 8.28; i += 0.06) {
+        servoX.write(servoValue((sin(i) + 1.5) / 4));
+        servoY.write(servoValue((cos(i) + 1) / 2));
         delay(5);
     }
 }
@@ -76,24 +71,28 @@ void loop() {
         ix += diffX * IF / timeDiff;
         iy += diffY * IF / timeDiff;
 
-        dx = (diffX - lastDiffX) * DF / timeDiff;
-        dy = (diffY - lastDiffY) * DF / timeDiff;
+        dx = sq(diffX - lastDiffX) * DF / timeDiff;
+        dy = sq(diffY - lastDiffY) * DF / timeDiff;
          
         posX = 0.5 + px + ix + dx;
         posY = 0.5 + py + iy + dy;
 
         lastDiffX = diffX;
         lastDiffY = diffY;
-    
+
         lastUpdateTime = millis();
     }
 
-    servoX.write((posX) * (servoMax - servoMin) + servoMin);
-    servoY.write((posY) * (servoMax - servoMin) + servoMin);
+    servoX.write(servoValue(posX));
+    servoY.write(servoValue(posY));
 
     Serial.print("bx:");
     Serial.print(ballX);
     Serial.print("by:");
     Serial.print(ballY);
     Serial.println();
+}
+
+int servoValue(float val) {
+    return val * (servoMax - servoMin) + servoMin;
 }
