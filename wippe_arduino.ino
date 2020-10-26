@@ -22,9 +22,9 @@ void setup() {
     Serial.println("initalizing");
 
     bool on = false;
-    for (float i = -2; i <= 8.28; i += 0.06) {
-        servoX.write(servoValue((sin(i) + 1.5) / 4));
-        servoY.write(servoValue((cos(i) + 1) / 2));
+    for (float i = 0; i <= 6.28; i += 0.1) {
+        servoX.write(servoValue(0.5 + sin(i) / 10));
+        servoY.write(servoValue(0.5 + cos(i) / 10));
         delay(5);
     }
 }
